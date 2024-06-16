@@ -12,6 +12,10 @@ This should allow you to make a completely serverless, client only chat web ui, 
 - **Streaming**: Support for streaming responses from the Ollama API.
 - **Event-driven**: Utilizes custom events for communication between different parts of your application.
 
+## Screenshot
+
+![screenshot of the example](./library/example/screenshot.png)
+
 ## Installation
 
 ### Chrome Extension

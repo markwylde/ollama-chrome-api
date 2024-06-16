@@ -4,7 +4,7 @@
   "version": "1.0",
   "description": "Allow websites to access your locally running Ollama instance.",
   "permissions": [
-    "tabs", "activeTab", "scripting", "webRequest", "storage",
+    "storage",
     "declarativeNetRequest",
     "declarativeNetRequestWithHostAccess"
   ],
