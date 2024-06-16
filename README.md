@@ -1,8 +1,10 @@
 # ollama-chrome-api
 
-`ollama-chrome-api` is a JavaScript library designed to facilitate interaction with the Ollama API through a Chrome extension or any web-based environment. It allows you to easily authorize and generate responses from the Ollama API using custom events.
+`ollama-chrome-api` is a Chrome Extension and a JavaScript library designed to facilitate interaction with the Ollama API through a Chrome extension or any web-based environment.
 
-Note that users must have the Ollama and the Ollama Chrome extension installed.
+It allows websites to communicate securely (explicit authorization is required on a per site basis) with a locally running Ollama instance, directly on the visitors machine.
+
+This should allow you to make a completely serverless, client only chat web ui, so long as the user can install the Chrome Extension and Ollama.
 
 ## Features
 
@@ -11,6 +13,14 @@ Note that users must have the Ollama and the Ollama Chrome extension installed.
 - **Event-driven**: Utilizes custom events for communication between different parts of your application.
 
 ## Installation
+
+### Chrome Extension
+
+I'm currently trying to get the extension added to the Chrome Web Store, but in the mean time you can download it and install the extension in dev mode. More information is in the [extension](./extension/) README.
+
+### Library
+
+I have built an ES Module library and published on npmjs.
 
 To install the `ollama-chrome-api` library, you can use npm:
 
@@ -82,7 +92,7 @@ function scrollMessagesToBottom() {
 
 ### Example
 
-A full example of how to use this library is available in the [example HTML file](./example/index.html). This example demonstrates how to set up a simple chat interface that interacts with the Ollama API.
+A full example of how to use this library is available in the [example HTML file](./library/example/index.html). This example demonstrates how to set up a simple chat interface that interacts with the Ollama API.
 
 ## Documentation
 
@@ -107,7 +117,7 @@ Sets up an event listener for authorization and dispatches an event to request a
 
 ## License
 
-This project is licensed under the MIT License. See the [LICENSE](./LICENSE) file for details.
+This project is licensed under the MIT License.
 
 ## Contributing
 
