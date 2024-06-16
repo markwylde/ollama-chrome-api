@@ -1,0 +1,13 @@
+{
+  "name": "ollama-chrome-api",
+  "version": "1.0.0",
+  "type": "module",
+  "keywords": ["ollama", "ai", "chrome", "extension"],
+  "description": "Allow websites to access your locally running Ollama instance.",
+  "main": "lib/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "MIT"
+}

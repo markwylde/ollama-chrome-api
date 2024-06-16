@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chat with Ollama</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f0f0f0;
+      margin: 0;
+      padding: 20px;
+    }
+    #chat-container {
+      max-width: 600px;
+      margin: 0 auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    }
+    #messages {
+      list-style-type: none;
+      padding: 0;
+    }
+    .message {
+      padding: 10px;
+      border-bottom: 1px solid #eee;
+    }
+    .message.user {
+      text-align: right;
+      background-color: #e0f7fa;
+    }
+    .message.bot {
+      text-align: left;
+      background-color: #fff9c4;
+    }
+    #input-container {
+      display: flex;
+      margin-top: 20px;
+    }
+    #prompt {
+      flex: 1;
+      padding: 10px;
+      font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    #send {
+      padding: 10px 20px;
+      font-size: 16px;
+      border: none;
+      background-color: #007bff;
+      color: white;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-left: 10px;
+    }
+    pre {
+      margin: 0;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+  <div id="chat-container">
+    <button id="authorize">Authorize</button>
+    <ul id="messages"></ul>
+    <div id="input-container">
+      <input type="text" id="prompt" placeholder="Type your message here">
+      <button id="send">Send</button>
+    </div>
+  </div>
+
+  <script type="module">
+    import { authorize, OllamaClient } from '../lib/index.js';
+
+    document.getElementById('authorize').onclick = async () => {
+      await authorize();
+    };
+
+    document.getElementById('send').onclick = async () => {
+      const promptInput = document.getElementById('prompt');
+      const promptText = promptInput.value;
+      if (!promptText) return;
+
+      addMessage(promptText, 'user');
+      promptInput.value = '';
+
+      const ollama = new OllamaClient('http://localhost:11434');
+      const stream = ollama.generate({
+        model: 'llama3',
+        prompt: promptText,
+        stream: true
+      });
+
+      let botMessage = addMessage('', 'bot');
+
+      for await (const chunk of stream) {
+        botMessage.innerHTML += chunk.response;
+        scrollMessagesToBottom();
+      }
+    };
+
+    function addMessage(text, sender) {
+      const messages = document.getElementById('messages');
+      const message = document.createElement('li');
+      message.className = `message ${sender}`;
+      const pre = document.createElement('pre');
+      pre.textContent = text;
+      message.appendChild(pre);
+      messages.appendChild(message);
+      scrollMessagesToBottom();
+      return pre;
+    }
+
+    function scrollMessagesToBottom() {
+      const messages = document.getElementById('messages');
+      messages.scrollTop = messages.scrollHeight;
+    }
+  </script>
+</body>
+</html>
