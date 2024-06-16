@@ -22,6 +22,8 @@
     #messages {
       list-style-type: none;
       padding: 0;
+      max-height: 400px;
+      overflow-y: auto;
     }
     .message {
       padding: 10px;
@@ -35,7 +37,7 @@
       text-align: left;
       background-color: #fff9c4;
     }
-    #input-container {
+    #form {
       display: flex;
       margin-top: 20px;
     }
@@ -66,40 +68,46 @@
   <div id="chat-container">
     <button id="authorize">Authorize</button>
     <ul id="messages"></ul>
-    <div id="input-container">
+    <form id="form">
       <input type="text" id="prompt" placeholder="Type your message here">
-      <button id="send">Send</button>
-    </div>
+      <button>Send</button>
+    </form>
   </div>
 
   <script type="module">
     import { authorize, OllamaClient } from '../lib/index.js';
 
+    let chatHistory = [];
+
     document.getElementById('authorize').onclick = async () => {
       await authorize();
     };
 
-    document.getElementById('send').onclick = async () => {
+    document.getElementById('form').onsubmit = async (event) => {
+      event.preventDefault();
       const promptInput = document.getElementById('prompt');
       const promptText = promptInput.value;
       if (!promptText) return;
 
       addMessage(promptText, 'user');
+      chatHistory.push({ role: 'user', content: promptText });
       promptInput.value = '';
 
       const ollama = new OllamaClient('http://localhost:11434');
       const stream = ollama.generate({
         model: 'llama3',
-        prompt: promptText,
+        messages: chatHistory,
         stream: true
       });
 
       let botMessage = addMessage('', 'bot');
 
       for await (const chunk of stream) {
-        botMessage.innerHTML += chunk.response;
+        botMessage.innerHTML += chunk.message.content;
         scrollMessagesToBottom();
       }
+
+      chatHistory.push({ role: 'assistant', content: botMessage.textContent });
     };
 
     function addMessage(text, sender) {

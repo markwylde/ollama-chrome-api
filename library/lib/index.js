@@ -57,9 +57,8 @@ export class OllamaClient {
     }
   }
 
-  async *generate({ model, prompt }) {
-    const url = `${this.baseUrl}/api/generate`;
-    const data = { model, prompt };
+  async *generate(data) {
+    const url = `${this.baseUrl}/api/chat`;
 
     const event = new CustomEvent("OllamaRequest", {
       detail: {
