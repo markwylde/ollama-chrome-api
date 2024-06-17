@@ -53,44 +53,17 @@ The `OllamaClient` class allows you to generate responses from the Ollama API. I
 ```javascript
 import { OllamaClient } from 'ollama-chrome-api';
 
-document.getElementById('send').onclick = async () => {
-  const promptInput = document.getElementById('prompt');
-  const promptText = promptInput.value;
-  if (!promptText) return;
+const ollama = new OllamaClient('http://localhost:11434');
+const stream = ollama.generate({
+  model: 'llama3',
+  messages: [
+    { role: 'user', content: 'Who are you' }
+  ],
+  stream: true
+});
 
-  addMessage(promptText, 'user');
-  promptInput.value = '';
-
-  const ollama = new OllamaClient('http://localhost:11434');
-  const stream = ollama.generate({
-    model: 'llama3',
-    prompt: promptText,
-    stream: true
-  });
-
-  let botMessage = addMessage('', 'bot');
-
-  for await (const chunk of stream) {
-    botMessage.innerHTML += chunk.response;
-    scrollMessagesToBottom();
-  }
-};
-
-function addMessage(text, sender) {
-  const messages = document.getElementById('messages');
-  const message = document.createElement('li');
-  message.className = `message ${sender}`;
-  const pre = document.createElement('pre');
-  pre.textContent = text;
-  message.appendChild(pre);
-  messages.appendChild(message);
-  scrollMessagesToBottom();
-  return pre;
-}
-
-function scrollMessagesToBottom() {
-  const messages = document.getElementById('messages');
-  messages.scrollTop = messages.scrollHeight;
+for await (const chunk of stream) {
+  console.log(chunk.message.content);
 }
 ```
 
