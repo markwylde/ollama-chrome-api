@@ -53,7 +53,7 @@ The `OllamaClient` class allows you to generate responses from the Ollama API. I
 ```javascript
 import { ollamaRequest } from 'ollama-chrome-api';
 
-const stream = ollamaRequest({
+const request = ollamaRequest({
   url: '/api/chat',
   method: 'post',
   headers: {
@@ -68,7 +68,11 @@ const stream = ollamaRequest({
   }
 });
 
-for await (const chunk of stream) {
+request.on('error', error => {
+  alert(error.message);
+});
+
+for await (const chunk of request.events('data')) {
   console.log(chunk.message.content);
 }
 ```
