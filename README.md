@@ -51,46 +51,27 @@ document.getElementById('authorize').onclick = async () => {
 The `OllamaClient` class allows you to generate responses from the Ollama API. It handles the streaming of responses and processes each chunk of data.
 
 ```javascript
-import { OllamaClient } from 'ollama-chrome-api';
+import { ollamaRequest } from 'ollama-chrome-api';
 
-const ollama = new OllamaClient('http://localhost:11434');
-const stream = ollama.generate({
-  model: 'llama3',
-  messages: [
-    { role: 'user', content: 'Who are you' }
-  ],
-  stream: true
+const stream = ollamaRequest({
+  url: '/api/chat',
+  method: 'post',
+  headers: {
+    'content-type': 'application/json'
+  },
+  body: {
+    model: 'llama3',
+    messages: [
+      { role: 'user', content: 'Who are you' }
+    ],
+    stream: true
+  }
 });
 
 for await (const chunk of stream) {
   console.log(chunk.message.content);
 }
 ```
-
-### Example
-
-A full example of how to use this library is available in the [example HTML file](./library/example/index.html). This example demonstrates how to set up a simple chat interface that interacts with the Ollama API.
-
-## Documentation
-
-### authorize()
-
-Sets up an event listener for authorization and dispatches an event to request authorization information.
-
-### OllamaClient
-
-#### constructor(baseUrl)
-
-- `baseUrl` (string): The base URL for the Ollama API.
-
-#### generate({ model, prompt })
-
-- `model` (string): The model to use for generating responses.
-- `prompt` (string): The prompt to send to the model.
-
-#### processChunk(chunk)
-
-- `chunk` (string): The chunk of data to process.
 
 ## License
 

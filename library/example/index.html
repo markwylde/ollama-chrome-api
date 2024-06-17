@@ -75,7 +75,7 @@
   </div>
 
   <script type="module">
-    import { authorize, OllamaClient } from '../lib/index.js';
+    import { authorize, ollamaRequest } from '../lib/index.js';
 
     let chatHistory = [];
 
@@ -93,11 +93,17 @@
       chatHistory.push({ role: 'user', content: promptText });
       promptInput.value = '';
 
-      const ollama = new OllamaClient('http://localhost:11434');
-      const stream = ollama.generate({
-        model: 'llama3',
-        messages: chatHistory,
-        stream: true
+      const stream = ollamaRequest({
+        url: '/api/chat',
+        method: 'post',
+        headers: {
+          'content-type': 'application/json'
+        },
+        body: {
+          model: 'llama3',
+          messages: chatHistory,
+          stream: true
+        }
       });
 
       let botMessage = addMessage('', 'bot');

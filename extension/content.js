@@ -18,18 +18,32 @@
         }
       });
       window.dispatchEvent(customEvent);
-    } else if (action === "ollama:generate") {
+    } else if (action === "ollama:request") {
       const port = chrome.runtime.connect({ name: "ollamaStream" });
       port.postMessage({
-        action: 'generate',
-        url: event.detail.url,
+        action: 'request',
         data: event.detail.data,
         correlationId: correlationId
       });
 
       port.onMessage.addListener(function(msg) {
+        msg.correlationId = correlationId;
         const customEvent = new CustomEvent("OllamaResponse", { detail: msg });
         window.dispatchEvent(customEvent);
+      });
+
+      port.onDisconnect.addListener(function() {
+        if (chrome.runtime.lastError) {
+          console.error('Port disconnected with error:', chrome.runtime.lastError);
+          const customEvent = new CustomEvent("OllamaResponse", {
+            detail: {
+              correlationId: correlationId,
+              error: chrome.runtime.lastError.message,
+              done: true
+            }
+          });
+          window.dispatchEvent(customEvent);
+        }
       });
     }
   });

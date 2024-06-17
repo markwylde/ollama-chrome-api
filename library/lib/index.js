@@ -6,108 +6,106 @@ export function authorize() {
       let params = `scrollbars=no,resizable=no,status=no,location=no,toolbar=no,menubar=no,width=400,height=100,left=100,top=100`;
       window.open(detail.url, null, params);
       window.removeEventListener("OllamaResponse", responseHandler);
+    } else if (detail.error) {
+      console.error('Authorization error:', detail.error);
+      displayError(detail.error);
     }
   }
 
   window.addEventListener("OllamaResponse", responseHandler);
 
   const authorizeEvent = new CustomEvent("OllamaRequest", {
-    detail: { action: "authorize:info", correlationId: generateCorrelationId() }
+    detail: {
+      action: "authorize:info",
+      correlationId: generateCorrelationId()
+    }
   });
   window.dispatchEvent(authorizeEvent);
 }
 
-export class OllamaClient {
-  constructor(baseUrl) {
-    this.baseUrl = baseUrl;
-    this.correlationId = generateCorrelationId();
-    this.initStream();
-  }
+export function ollamaRequest(data) {
+  const correlationId = generateCorrelationId();
+  let streamController = null;
+  let partialChunk = '';
 
-  initStream() {
-    this.streamController = null;
-    this.stream = new ReadableStream({
-      start: controller => {
-        this.streamController = controller;
-        window.addEventListener("OllamaResponse", this.listener.bind(this));
-      }
-    }).getReader();
-  }
+  const listener = (event) => {
 
-  listener(event) {
     const response = event.detail;
-    if (response.correlationId !== this.correlationId) return;
+    if (response.correlationId !== correlationId) return;
 
     if (response.error) {
-      console.error('Error:', response.error);
-      if (this.streamController) {
-        this.streamController.error(response.error);
+      console.error('Request error:', response.error);
+      displayError(response.error);
+      if (streamController) {
+        streamController.error(response.error);
       }
-      window.removeEventListener("OllamaResponse", this.listener.bind(this));
+      window.removeEventListener("OllamaResponse", listener);
     } else {
       try {
         if (response.data) {
-          if (this.streamController) {
-            this.streamController.enqueue(response.data);
+          partialChunk += response.data;
+          let boundary = partialChunk.indexOf('\n');
+          while (boundary !== -1) {
+            const jsonString = partialChunk.slice(0, boundary);
+            partialChunk = partialChunk.slice(boundary + 1);
+            boundary = partialChunk.indexOf('\n');
+
+            try {
+              const obj = JSON.parse(jsonString);
+              if (streamController) {
+                streamController.enqueue(obj);
+              }
+            } catch (e) {
+              console.error('Error parsing JSON:', e);
+              displayError('Error parsing JSON: ' + e.message);
+            }
           }
         }
       } catch (e) {
         console.error('Stream enqueue error:', e);
+        displayError('Stream enqueue error: ' + e.message);
       }
-      if (response.done && this.streamController) {
-        this.streamController.close();
-        window.removeEventListener("OllamaResponse", this.listener.bind(this));
+      if (response.done && streamController) {
+        streamController.close();
+        window.removeEventListener("OllamaResponse", listener);
       }
     }
   }
 
-  async *generate(data) {
-    const url = `${this.baseUrl}/api/chat`;
+  window.addEventListener("OllamaResponse", listener);
 
-    const event = new CustomEvent("OllamaRequest", {
-      detail: {
-        action: "ollama:generate",
-        url: url,
-        data: data,
-        correlationId: this.correlationId
-      }
-    });
-    window.dispatchEvent(event);
+  const event = new CustomEvent("OllamaRequest", {
+    detail: {
+      action: "ollama:request",
+      data,
+      correlationId
+    }
+  });
+  window.dispatchEvent(event);
 
+  const stream = new ReadableStream({
+    start: controller => {
+      streamController = controller;
+    },
+  });
+
+  async function* generate() {
+    const reader = stream.getReader();
     try {
       while (true) {
-        const { done, value } = await this.stream.read();
+        const { done, value } = await reader.read();
         if (done) break;
         if (value) {
-          yield* this.processChunk(value);
+          yield value;
         }
       }
     } catch (error) {
-      console.error('Error:', error);
+      console.error('Stream read error:', error);
+      displayError('Stream read error: ' + error.message);
     }
   }
 
-  *processChunk(chunk) {
-    if (!chunk) {
-      console.error('Received an empty chunk');
-      return;
-    }
-
-    const jsons = chunk.trim().split(/}\s*{/).map((line, index, arr) => {
-      if (index !== 0) line = '{' + line;
-      if (index !== arr.length - 1) line = line + '}';
-      return line;
-    });
-
-    for (const json of jsons) {
-      try {
-        const obj = JSON.parse(json);
-        yield obj;
-      } catch (e) {
-        console.error('Error parsing JSON:', e);
-      }
-    }
-  }
+  return generate();
 }
 
 function generateCorrelationId() {
@@ -115,4 +113,11 @@ function generateCorrelationId() {
     const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
     return v.toString(16);
   });
+}
+
+function displayError(error) {
+  const errorElement = document.createElement('div');
+  errorElement.style.color = 'red';
+  errorElement.textContent = `Error: ${error}`;
+  document.body.appendChild(errorElement);
 }
