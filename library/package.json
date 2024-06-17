@@ -11,8 +11,19 @@
   "description": "Allow websites to access your locally running Ollama instance.",
   "main": "lib/index.js",
   "scripts": {
+    "prepublish": "npx esbuild --bundle src/index.ts --outfile=lib/index.js --loader:.ts=ts --format=esm",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "",
-  "license": "MIT"
+  "author": {
+    "email": "me@markwylde.com",
+    "name": "Mark Wylde",
+    "url": "https://github.com/markwylde"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "emittery": "^1.0.3"
+  },
+  "devDependencies": {
+    "esbuild": "^0.21.5"
+  }
 }

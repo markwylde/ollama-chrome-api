@@ -96,7 +96,7 @@
       chatHistory.push({ role: 'user', content: promptText });
       promptInput.value = '';
 
-      const stream = ollamaRequest({
+      const request = ollamaRequest({
         url: '/api/chat',
         method: 'post',
         headers: {
@@ -109,9 +109,16 @@
         }
       });
 
+      request.on('error', error => {
+        const errorElement = document.createElement('div');
+        errorElement.style.color = 'red';
+        errorElement.textContent = `Error: ${error}`;
+        document.body.appendChild(errorElement);
+      });
+
       let botMessage = addMessage('', 'bot');
 
-      for await (const chunk of stream) {
+      for await (const chunk of request.events('data')) {
         botMessage.innerHTML += chunk.message.content;
         scrollMessagesToBottom();
       }
