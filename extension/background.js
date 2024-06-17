@@ -31,7 +31,7 @@ chrome.runtime.onConnect.addListener(function(port) {
       console.log(`Authorization status for ${authKey}: ${authorized}`);
 
       if (!authorized) {
-        port.postMessage({error: 'Not authorized', done: true});
+        port.postMessage({ correlationId: msg.correlationId, error: 'Not authorized', done: true });
         port.disconnect();
         return;
       }
@@ -54,21 +54,21 @@ function handleGenerateRequest(msg, port) {
   .then(response => response.body.getReader())
   .then(reader => {
     function push() {
-      reader.read().then(({done, value}) => {
+      reader.read().then(({ done, value }) => {
         if (done) {
-          port.postMessage({done: true});
+          port.postMessage({ correlationId: msg.correlationId, done: true });
           port.disconnect();
           return;
         }
         let text = new TextDecoder("utf-8").decode(value);
-        port.postMessage({data: text, done: false});
+        port.postMessage({ correlationId: msg.correlationId, data: text, done: false });
         push();
       });
     }
     push();
   })
   .catch(error => {
-    port.postMessage({error: error.message, done: true});
+    port.postMessage({ correlationId: msg.correlationId, error: error.message, done: true });
     port.disconnect();
   });
 }
