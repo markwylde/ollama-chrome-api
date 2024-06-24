@@ -1,80 +1,63 @@
-chrome.runtime.onInstalled.addListener(() => {
-  chrome.declarativeNetRequest.updateDynamicRules({
-    removeRuleIds: [1],
-    addRules: [{
-      id: 1,
-      priority: 1,
-      action: {
-        type: 'modifyHeaders',
-        requestHeaders: [
-          { header: 'Origin', 'operation': 'remove' }
-        ]
-      },
-      condition: {
-        urlFilter: '|http*',
-        initiatorDomains: [chrome.runtime.id],
-        resourceTypes: ['xmlhttprequest']
-      }
-    }]
-  });
-});
+import syncRules from './syncRules.js';
 
-chrome.runtime.onConnect.addListener(function(port) {
-  console.assert(port.name === 'ollamaStream');
+let tabId = undefined;
+chrome.webRequest.onBeforeRequest.addListener(
+  async function(details) {
+    const url = new URL(details.url);
+    if (url.host === "localhost:11434") {
+      const vars = await chrome.storage.local.get();
 
-  port.onMessage.addListener(function(msg) {
-    console.log('Received message:', msg);
-    const origin = new URL(port.sender.url).origin;
-    const authKey = 'ollamaAuthorized:' + origin;
+      const hosts = Object
+        .keys(vars)
+        .filter(v => v.startsWith('ollamaAuthorized:'))
+        .map(v => v.slice('ollamaAuthorized:'.length));
 
-    chrome.storage.local.get([authKey], function(result) {
-      const authorized = result[authKey];
-      console.log(`Authorization status for ${authKey}: ${authorized}`);
+      const initiator = new URL(details.initiator).hostname;
 
-      if (!authorized) {
-        port.postMessage({ correlationId: msg.correlationId, error: 'Not authorized', done: true });
-        port.disconnect();
+      if (hosts.includes(initiator)) {
         return;
       }
 
-      if (msg.action === 'request') {
-        handleRequest(msg.data, port);
-      }
-    });
-  });
-});
+      const [tab] = await chrome.tabs.query({active: true});
+      const activeTabHostname = new URL(tab.url).hostname;
 
-function handleRequest(msg, port) {
-  if (typeof msg.body === 'object') {
-    msg.body = JSON.stringify(msg.body);
+      if (tabId) {
+        try {
+          await chrome.tabs.remove(tabId);
+        } catch (e) {
+          console.warn(`Failed to close tab with id ${tabId}: ${e.message}`);
+        }
+        tabId = null;
+      }
+
+      const newTab = await chrome.windows.create({
+        focused: true,
+        url: `chrome-extension://${chrome.runtime.id}/request.html?host=${activeTabHostname}`,
+        type: 'popup',
+        width: 400,
+        height: 150
+      });
+
+      tabId = newTab.id;
+    }
+  },
+  { urls: ["<all_urls>"] }
+);
+
+chrome.runtime.onInstalled.addListener(async () => {
+  const vars = await chrome.storage.local.get();
+
+  const hosts = Object
+    .keys(vars)
+    .filter(v => v.startsWith('ollamaAuthorized:'))
+    .map(v => v.slice('ollamaAuthorized:'.length));
+
+  if (hosts.length === 0) {
+    chrome.declarativeNetRequest.updateDynamicRules({
+      removeRuleIds: [1, 2]
+    });
+    return;
   }
-  console.log(`Fetching from URL: http://localhost:11434${msg.url} with message:`, msg);
 
-  fetch(`http://localhost:11434${msg.url}`, msg)
-    .then(response => {
-      const reader = response.body.getReader();
-      function push() {
-        reader.read().then(({ done, value }) => {
-          if (done) {
-            port.postMessage({ correlationId: msg.correlationId, done: true });
-            port.disconnect();
-            return;
-          }
-          let text = new TextDecoder('utf-8').decode(value);
-          console.log('Received chunk:', text);
-          port.postMessage({ correlationId: msg.correlationId, data: text, done: false });
-          push();
-        }).catch(error => {
-          console.error('Read error:', error);
-          port.postMessage({ correlationId: msg.correlationId, error: error.message, done: true });
-          port.disconnect();
-        });
-      }
-      push();
-    })
-    .catch(error => {
-      console.error('Fetch error:', error);
-      port.postMessage({ correlationId: msg.correlationId, error: error.message, done: true });
-      port.disconnect();
-    });
-}
+  syncRules();
+});
