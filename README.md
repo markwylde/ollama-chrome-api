@@ -13,7 +13,7 @@ This should allow you to make a completely serverless, client only chat web ui, 
 
 ## Screenshot
 
-![screenshot of the example](./library/example/screenshot.png)
+![screenshot of the example](./example/screenshot.png)
 
 ## Installation
 
