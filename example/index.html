@@ -61,6 +61,10 @@
       cursor: pointer;
       margin-left: 10px;
     }
+    #send:disabled {
+      background-color: #cccccc;
+      cursor: not-allowed;
+    }
     #modelSelect {
       width: 100%;
       padding: 10px;
@@ -73,10 +77,36 @@
       margin: 0;
       white-space: pre-wrap;
     }
+    .alert {
+      padding: 8px;
+      margin-bottom: 8px;
+      background-color: rgb(255, 255, 205);
+      border: 1px solid rgb(154, 154, 117);
+    }
+    .spinner {
+      border: 2px solid #f3f3f3;
+      border-top: 2px solid #007bff;
+      border-radius: 50%;
+      width: 16px;
+      height: 16px;
+      animation: spin 1s linear infinite;
+      display: inline-block;
+      vertical-align: middle;
+      margin-right: 5px;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
   </style>
 </head>
 <body>
   <div id="chat-container">
+    <div class="alert alert-warning">
+      <strong>Read First!</strong>
+      This example requires <a href="https://ollama.com/download">Ollama</a> and the <a href="https://chromewebstore.google.com/detail/ollama-chrome-api/eeceimooeojijecjhjedodbhimcfgiif">Ollama Chrome API</a> to be installed before it will work.
+    </div>
+
     <select id="modelSelect"></select>
     <ul id="messages"></ul>
     <form id="form">
@@ -162,6 +192,18 @@
       messages.scrollTop = messages.scrollHeight;
     }
 
+    function disableSendButton() {
+      const sendButton = document.getElementById('send');
+      sendButton.disabled = true;
+      sendButton.innerHTML = '<span class="spinner"></span>Generating...';
+    }
+
+    function enableSendButton() {
+      const sendButton = document.getElementById('send');
+      sendButton.disabled = false;
+      sendButton.innerHTML = 'Send';
+    }
+
     document.getElementById('form').addEventListener('submit', async (e) => {
       e.preventDefault();
 
@@ -170,10 +212,18 @@
       if (!prompt || !model) return;
 
       displayMessage(prompt, 'user');
-
       document.getElementById('prompt').value = '';
 
-      await streamChatMessage(prompt, model);
+      disableSendButton();
+
+      try {
+        await streamChatMessage(prompt, model);
+      } catch (error) {
+        console.error('Error:', error);
+        displayMessage('An error occurred while processing your request.', 'bot');
+      } finally {
+        enableSendButton();
+      }
     });
 
     setInterval(() => {
