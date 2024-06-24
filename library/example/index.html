@@ -61,6 +61,14 @@
       cursor: pointer;
       margin-left: 10px;
     }
+    #modelSelect {
+      width: 100%;
+      padding: 10px;
+      font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      margin-bottom: 20px;
+    }
     pre {
       margin: 0;
       white-space: pre-wrap;
@@ -69,79 +77,109 @@
 </head>
 <body>
   <div id="chat-container">
-    <button id="authorize">Authorize</button>
+    <select id="modelSelect"></select>
     <ul id="messages"></ul>
     <form id="form">
       <input type="text" id="prompt" placeholder="Type your message here">
       <button id="send" type="submit">Send</button>
     </form>
   </div>
-
   <script type="module">
-    import { authorize, ollamaRequest } from '../lib/index.js';
+    let chatMessages = [];
 
-    let chatHistory = [];
-
-    document.getElementById('authorize').onclick = async () => {
-      await authorize();
-    };
-
-    document.getElementById('form').onsubmit = async (event) => {
-      event.preventDefault();
-      const promptInput = document.getElementById('prompt');
-      const promptText = promptInput.value;
-      if (!promptText) return;
-
-      addMessage(promptText, 'user');
-      chatHistory.push({ role: 'user', content: promptText });
-      promptInput.value = '';
-
-      const request = ollamaRequest({
-        url: '/api/chat',
-        method: 'post',
+    async function listModels() {
+      const response = await fetch('http://localhost:11434/api/tags', {
+        method: 'get',
         headers: {
           'content-type': 'application/json'
-        },
-        body: {
-          model: 'llama3',
-          messages: chatHistory,
-          stream: true
         }
       });
 
-      request.on('error', error => {
-        const errorElement = document.createElement('div');
-        errorElement.style.color = 'red';
-        errorElement.textContent = `Error: ${error}`;
-        document.body.appendChild(errorElement);
+      const tags = await response.json();
+      return tags.models;
+    }
+
+    function populateModelSelect(models) {
+      const modelSelect = document.getElementById('modelSelect');
+      const existingOptions = new Set();
+      Array.from(modelSelect.options).forEach(option => existingOptions.add(option.value));
+      models.forEach(model => {
+        if (!existingOptions.has(model.name)) {
+          const option = document.createElement('option');
+          option.value = model.name;
+          option.textContent = model.name;
+          modelSelect.appendChild(option);
+        }
+      });
+    }
+
+    async function streamChatMessage(prompt, model) {
+      chatMessages.push({ role: 'user', content: prompt });
+
+      const response = await fetch('http://localhost:11434/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model,
+          messages: chatMessages,
+          stream: true
+        })
       });
 
-      let botMessage = addMessage('', 'bot');
-
-      for await (const chunk of request.events('data')) {
-        botMessage.innerHTML += chunk.message.content;
-        scrollMessagesToBottom();
+      if (!response.body) {
+        throw new Error('ReadableStream not yet supported in this browser.');
       }
 
-      chatHistory.push({ role: 'assistant', content: botMessage.textContent });
-    };
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let message = '';
 
-    function addMessage(text, sender) {
-      const messages = document.getElementById('messages');
-      const message = document.createElement('li');
-      message.className = `message ${sender}`;
-      const pre = document.createElement('pre');
-      pre.textContent = text;
-      message.appendChild(pre);
-      messages.appendChild(message);
-      scrollMessagesToBottom();
-      return pre;
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const jsonResponse = JSON.parse(decoder.decode(value));
+        message += jsonResponse.message.content;
+
+        const botMessage = document.querySelector('.message.bot:last-child pre');
+        if (botMessage) {
+          botMessage.textContent = message;
+        } else {
+          displayMessage(message, 'bot');
+          chatMessages.push(jsonResponse.message);
+        }
+      }
     }
 
-    function scrollMessagesToBottom() {
+    function displayMessage(text, sender) {
       const messages = document.getElementById('messages');
+      const messageElement = document.createElement('li');
+      messageElement.className = `message ${sender}`;
+      messageElement.innerHTML = `<pre>${text}</pre>`;
+      messages.appendChild(messageElement);
       messages.scrollTop = messages.scrollHeight;
     }
+
+    document.getElementById('form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const prompt = document.getElementById('prompt').value;
+      const model = document.getElementById('modelSelect').value;
+      if (!prompt || !model) return;
+
+      displayMessage(prompt, 'user');
+
+      document.getElementById('prompt').value = '';
+
+      await streamChatMessage(prompt, model);
+    });
+
+    setInterval(() => {
+      listModels().then(populateModelSelect);
+    }, 5000);
+    listModels().then(populateModelSelect);
   </script>
 </body>
 </html>

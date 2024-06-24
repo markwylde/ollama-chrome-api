@@ -4,23 +4,19 @@
   "version": "1.0",
   "description": "Allow websites to access your locally running Ollama instance.",
   "permissions": [
+    "webRequest",
+    "activeTab",
     "storage",
     "declarativeNetRequest",
     "declarativeNetRequestWithHostAccess"
   ],
   "host_permissions": [
-    "http://localhost:11434/*"
+    "<all_urls>"
   ],
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "background.js",
+    "type": "module"
   },
-  "content_scripts": [
-    {
-      "matches": ["*://*/*"],
-      "js": ["content.js"],
-      "run_at": "document_end"
-    }
-  ],
   "web_accessible_resources": [
     {
       "resources": ["script.js"],

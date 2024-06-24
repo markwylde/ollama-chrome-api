@@ -11,6 +11,7 @@
   "description": "Allow websites to access your locally running Ollama instance.",
   "main": "lib/index.js",
   "scripts": {
+    "watch": "npx esbuild --watch --bundle src/index.ts --outfile=lib/index.js --loader:.ts=ts --format=esm",
     "prepublish": "npx esbuild --bundle src/index.ts --outfile=lib/index.js --loader:.ts=ts --format=esm",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
