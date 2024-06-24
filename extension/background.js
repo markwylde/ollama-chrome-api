@@ -18,9 +18,6 @@ chrome.webRequest.onBeforeRequest.addListener(
         return;
       }
 
-      const [tab] = await chrome.tabs.query({active: true});
-      const activeTabHostname = new URL(tab.url).hostname;
-
       if (tabId) {
         try {
           await chrome.tabs.remove(tabId);
@@ -32,7 +29,7 @@ chrome.webRequest.onBeforeRequest.addListener(
 
       const newTab = await chrome.windows.create({
         focused: true,
-        url: `chrome-extension://${chrome.runtime.id}/request.html?host=${activeTabHostname}`,
+        url: `chrome-extension://${chrome.runtime.id}/request.html?host=${initiator}`,
         type: 'popup',
         width: 400,
         height: 150
