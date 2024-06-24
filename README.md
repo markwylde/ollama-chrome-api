@@ -1,16 +1,15 @@
 # ollama-chrome-api
 
-`ollama-chrome-api` is a Chrome Extension and a JavaScript library designed to facilitate interaction with the Ollama API through a Chrome extension or any web-based environment.
+`ollama-chrome-api` is a Chrome Extension designed to allow any website to communicate with the users locally running Ollama instance, directly on the users machine.
 
-It allows websites to communicate securely (explicit authorization is required on a per site basis) with a locally running Ollama instance, directly on the visitors machine.
+It allows websites to communicate securely by explicitly requiring authorization on a per domain basis.
 
 This should allow you to make a completely serverless, client only chat web ui, so long as the user can install the Chrome Extension and Ollama.
 
 ## Features
 
 - **Authorization**: Handle authorization requests and responses.
-- **Streaming**: Support for streaming responses from the Ollama API.
-- **Event-driven**: Utilizes custom events for communication between different parts of your application.
+- **Fetch**: Support for using fetch to directly communicate with Ollama.
 
 ## Screenshot
 
@@ -20,61 +19,25 @@ This should allow you to make a completely serverless, client only chat web ui, 
 
 ### Chrome Extension
 
-I'm currently trying to get the extension added to the Chrome Web Store, but in the mean time you can download it and install the extension in dev mode. More information is in the [extension](./extension/) README.
-
-### Library
-
-I have built an ES Module library and published on npmjs.
-
-To install the `ollama-chrome-api` library, you can use npm:
-
-```bash
-npm install ollama-chrome-api
-```
+Download the [ollama-chrome-api](https://chromewebstore.google.com/detail/ollama-chrome-api/eeceimooeojijecjhjedodbhimcfgiif) extension from the Chrome Webstore.
 
 ## Usage
 
-### Authorization
+You simply talk to Ollama using fetch on `localhost:11434`.
 
-The `authorize` function sets up an event listener for the `OllamaResponse` event and dispatches an `OllamaRequest` event to initiate the authorization process.
-
-```javascript
-import { authorize } from 'ollama-chrome-api';
-
-document.getElementById('authorize').onclick = async () => {
-  await authorize();
-};
-```
-
-### Generating Responses
-
-The `OllamaClient` class allows you to generate responses from the Ollama API. It handles the streaming of responses and processes each chunk of data.
+The first time each domain makes this request, an authorize window will popup asking the user to approve or deny the request.
 
 ```javascript
-import { ollamaRequest } from 'ollama-chrome-api';
-
-const request = ollamaRequest({
-  url: '/api/chat',
-  method: 'post',
+const response = await fetch('http://localhost:11434/api/chat', {
+  method: 'POST',
   headers: {
-    'content-type': 'application/json'
+    'Content-Type': 'application/json'
   },
-  body: {
-    model: 'llama3',
-    messages: [
-      { role: 'user', content: 'Who are you' }
-    ],
-    stream: true
-  }
+  body: JSON.stringify({
+    model,
+    messages: chatMessages
+  })
 });
-
-request.on('error', error => {
-  alert(error.message);
-});
-
-for await (const chunk of request.events('data')) {
-  console.log(chunk.message.content);
-}
 ```
 
 ## License
